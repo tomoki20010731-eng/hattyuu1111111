@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>発注計算</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 12px;
+  background: #f5f5f5;
+  color: #222;
+}
+
+h1 {
+  font-size: 24px;
+  margin: 12px 0 18px;
+  text-align: center;
+}
+
+h2 {
+  font-size: 20px;
+  border-left: 6px solid #333;
+  padding-left: 10px;
+  margin-top: 10px;
+}
+
+h3 {
+  font-size: 18px;
+  margin: 18px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #ddd;
+}
+
+.box {
+  background: #fff;
+  padding: 14px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+input {
+  width: 110px;
+  height: 44px;
+  padding: 6px;
+  font-size: 22px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+button {
+  width: 100%;
+  margin-top: 16px;
+  padding: 16px;
+  font-size: 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  background: #222;
+  color: white;
+}
+
+button:active { opacity: 0.75; }
+
+.reset { background: #999; }
+
+.item {
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.order {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.calc {
+  font-size: 15px;
+  color: #555;
+  line-height: 1.7;
+}
+
+.note {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+@media (max-width: 480px) {
+  body { padding: 10px; }
+  h1 { font-size: 22px; }
+  label { font-size: 17px; }
+  input {
+    width: 100px;
+    font-size: 22px;
+  }
+  .order { font-size: 21px; }
+}
+</style>
+</head>
+
+<body>
+
+<h1>九十九甲府店 発注計算</h1>
+
+<div class="box">
+  <h2>予約人数入力</h2>
+
+  <label>席のみ <input id="seat" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+  <label>堪能コース <input id="tanno" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+
+  <h3>雅コース メイン選択</h3>
+  <label>雅：ちゃんこ鍋 <input id="miyabiNabe" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+  <label>雅：ガーリックロースステーキ <input id="miyabiSteak" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+
+  <h3>九十九コース メイン選択</h3>
+  <label>九十九：旨辛豚バラ鉄板焼き <input id="tukumoBara" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+  <label>九十九：2種肉ステーキ盛り <input id="tukumoSteak" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+
+  <h3>牡丹コース メイン選択</h3>
+  <label>牡丹：3種肉ステーキ盛り <input id="botanSteak" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+  <label>牡丹：豚とホルモンのスタミナ焼き <input id="botanKoma" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+
+  <label>極みコース <input id="kiwami" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+  <label>甲斐の国コース <input id="kai" type="number" inputmode="numeric" min="0" value="0"> 名</label>
+
+  <button onclick="calc()">計算する</button>
+  <button class="reset" onclick="resetForm()">リセット</button>
+
+  <div class="note">
+    ※雅・九十九・牡丹はメイン別に人数を入力してください。<br>
+    ※発注数はすべて端数切り上げです。
+  </div>
+</div>
+
+<div class="box">
+  <h2>発注結果</h2>
+  <div id="result">人数を入力して「計算する」を押してください。</div>
+</div>
+
+<script>
+function up(num) {
+  return Math.ceil(num);
+}
+
+function n(id) {
+  return Number(document.getElementById(id).value) || 0;
+}
+
+function item(name, pc, calcText) {
+  if (pc <= 0 || !isFinite(pc)) return "";
+  return `
+    <div class="item">
+      <div class="order">${name}：${pc} pc</div>
+      <div class="calc">${calcText}</div>
+    </div>
+  `;
+}
+
+function calc() {
+  const seat = n("seat");
+  const tanno = n("tanno");
+
+  const miyabiNabe = n("miyabiNabe");
+  const miyabiSteak = n("miyabiSteak");
+  const miyabi = miyabiNabe + miyabiSteak;
+
+  const tukumoBara = n("tukumoBara");
+  const tukumoSteak = n("tukumoSteak");
+  const tukumo = tukumoBara + tukumoSteak;
+
+  const botanSteak = n("botanSteak");
+  const botanKoma = n("botanKoma");
+  const botan = botanSteak + botanKoma;
+
+  const kiwami = n("kiwami");
+  const kai = n("kai");
+
+  const totalPeople = seat + tanno + miyabi + tukumo + botan + kiwami + kai;
+
+  if (totalPeople === 0) {
+    document.getElementById("result").innerHTML = "人数を入力してください。";
+    return;
+  }
+
+  let html = "";
+
+  html += "<h2>高瀬物産</h2>";
+
+  let potatoPeople = seat + miyabi + tukumo + botan + kiwami + kai;
+  let potatoGram = potatoPeople * 40;
+  html += item("ポテトサラダ", up(potatoGram / 1000),
+    `対象：席のみ・雅・九十九・牡丹・極み・甲斐の国<br>
+    ${potatoPeople}名 × 40g = ${potatoGram}g<br>
+    1pc = 1000g<br>
+    ${potatoGram} ÷ 1000 = ${(potatoGram / 1000).toFixed(2)}pc<br>
+    → 切り上げ ${up(potatoGram / 1000)}pc`);
+
+  let asariPeople = miyabi + botan;
+  let asariGram = asariPeople * 50;
+  html += item("あさり", up(asariGram / 500),
+    `対象：雅・牡丹<br>
+    ${asariPeople}名 × 50g = ${asariGram}g<br>
+    1pc = 500g<br>
+    ${asariGram} ÷ 500 = ${(asariGram / 500).toFixed(2)}pc<br>
+    → 切り上げ ${up(asariGram / 500)}pc`);
+
+  let tamagoPeople = tanno + tukumo + botan + kiwami;
+  html += item("厚焼き玉子", up(tamagoPeople / 16),
+    `対象：堪能・九十九・牡丹・極み<br>
+    ${tamagoPeople}人前<br>
+    1pc = 16人前<br>
+    ${tamagoPeople} ÷ 16 = ${(tamagoPeople / 16).toFixed(2)}pc<br>
+    → 切り上げ ${up(tamagoPeople / 16)}pc`);
+
+  let dessertPeople = miyabi + tukumo + botan + kiwami + kai;
+  html += item("デザート", up(dessertPeople / 30),
+    `対象：雅・九十九・牡丹・極み・甲斐の国<br>
+    ${dessertPeople}人前<br>
+    1pc = 30人前<br>
+    ${dessertPeople} ÷ 30 = ${(dessertPeople / 30).toFixed(2)}pc<br>
+    → 切り上げ ${up(dessertPeople / 30)}pc`);
+
+  let kamoPeople = tanno + kiwami + kai;
+  html += item("かも", up(kamoPeople / 100),
+    `対象：堪能・極み・甲斐の国<br>
+    ${kamoPeople}人前<br>
+    1pc = 100人前<br>
+    ${kamoPeople} ÷ 100 = ${(kamoPeople / 100).toFixed(2)}pc<br>
+    → 切り上げ ${up(kamoPeople / 100)}pc`);
+
+  let edamamePeople = kiwami;
+  let edamameGram = edamamePeople * 37.5;
+  html += item("枝豆", up(edamameGram / 1000),
+    `対象：極み<br>
+    4人前150g → 1人前37.5g<br>
+    ${edamamePeople}名 × 37.5g = ${edamameGram}g<br>
+    1pc = 1000g<br>
+    ${edamameGram} ÷ 1000 = ${(edamameGram / 1000).toFixed(2)}pc<br>
+    → 切り上げ ${up(edamameGram / 1000)}pc`);
+
+  let udonPeople = miyabi + tukumo + kiwami;
+  html += item("うどん", up(udonPeople / 5),
+    `対象：雅・九十九・極み<br>
+    ${udonPeople}玉<br>
+    1pc = 5玉<br>
+    ${udonPeople} ÷ 5 = ${(udonPeople / 5).toFixed(2)}pc<br>
+    → 切り上げ ${up(udonPeople / 5)}pc`);
+
+  let houtouPeople = kai;
+  html += item("ほうとう", up(houtouPeople / 5),
+    `対象：甲斐の国<br>
+    ${houtouPeople}玉<br>
+    1pc = 5玉<br>
+    ${houtouPeople} ÷ 5 = ${(houtouPeople / 5).toFixed(2)}pc<br>
+    → 切り上げ ${up(houtouPeople / 5)}pc`);
+
+  let taraPeople = kiwami;
+  html += item("魚（たら）", up(taraPeople / 5),
+    `対象：極み<br>
+    ${taraPeople}人前 × 1切れ = ${taraPeople}切れ<br>
+    1pc = 5切れ<br>
+    ${taraPeople} ÷ 5 = ${(taraPeople / 5).toFixed(2)}pc<br>
+    → 切り上げ ${up(taraPeople / 5)}pc`);
+
+  html += "<h2>わたなべ（肉屋）</h2>";
+
+  let chickenGram =
+    (tanno * 50) +
+    (miyabiNabe * 50) +
+    (tukumoSteak * 50) +
+    (botanSteak * 50);
+
+  html += item("鶏もも", up(chickenGram / 2000),
+    `対象：堪能・雅ちゃんこ鍋・九十九2種肉・牡丹3種肉<br>
+    1人前50g計算<br>
+    合計 ${chickenGram}g<br>
+    1pc = 2kg<br>
+    ${chickenGram} ÷ 2000 = ${(chickenGram / 2000).toFixed(2)}pc<br>
+    → 切り上げ ${up(chickenGram / 2000)}pc`);
+
+  let porkLoinGram =
+    (miyabiSteak * 50) +
+    (tukumoSteak * 50) +
+    (botanSteak * 50) +
+    (kai * 50);
+
+  html += item("豚ロース", up(porkLoinGram / 1000),
+    `対象：雅ロースステーキ・九十九2種肉・牡丹3種肉・甲斐の国<br>
+    1人前50g計算<br>
+    合計 ${porkLoinGram}g<br>
+    1pc = 1kg<br>
+    ${porkLoinGram} ÷ 1000 = ${(porkLoinGram / 1000).toFixed(2)}pc<br>
+    → 切り上げ ${up(porkLoinGram / 1000)}pc`);
+
+  let porkBaraGram = tukumoBara * 60;
+  html += item("豚バラ", up(porkBaraGram / 1000),
+    `対象：九十九 旨辛豚バラ鉄板焼き<br>
+    ${tukumoBara}名 × 60g = ${porkBaraGram}g<br>
+    1pc = 1kg<br>
+    ${porkBaraGram} ÷ 1000 = ${(porkBaraGram / 1000).toFixed(2)}pc<br>
+    → 切り上げ ${up(porkBaraGram / 1000)}pc`);
+
+  let haramiSteakGram = botanSteak * 20;
+  html += item("ハラミ（ステーキ用）", up(haramiSteakGram / 700),
+    `対象：牡丹 3種肉ステーキ盛り<br>
+    ${botanSteak}名 × 20g = ${haramiSteakGram}g（使用量）<br>
+    1pc = 1kg、処理後約700g<br>
+    ${haramiSteakGram} ÷ 700 = ${(haramiSteakGram / 700).toFixed(2)}pc<br>
+    → 切り上げ ${up(haramiSteakGram / 700)}pc`);
+
+  let haramiYukkeGram = botan * 20;
+  html += item("ハラミ（ユッケ用）", up(haramiYukkeGram / 700),
+    `対象：牡丹 全メイン共通<br>
+    ${botan}名 × 20g = ${haramiYukkeGram}g（使用量）<br>
+    1pc = 1kg、処理後約700g<br>
+    ${haramiYukkeGram} ÷ 700 = ${(haramiYukkeGram / 700).toFixed(2)}pc<br>
+    → 切り上げ ${up(haramiYukkeGram / 700)}pc`);
+
+  let porkKomaGram = botanKoma * 60;
+  html += item("豚こま", up(porkKomaGram / 1000),
+    `対象：牡丹 豚こま<br>
+    ${botanKoma}名 × 60g = ${porkKomaGram}g<br>
+    1pc = 1kg<br>
+    ${porkKomaGram} ÷ 1000 = ${(porkKomaGram / 1000).toFixed(2)}pc<br>
+    → 切り上げ ${up(porkKomaGram / 1000)}pc`);
+
+  let beefBaraGram = kiwami * 100;
+  html += item("牛バラ", up(beefBaraGram / 1000),
+    `対象：極み<br>
+    ${kiwami}名 × 100g = ${beefBaraGram}g<br>
+    1pc = 1kg<br>
+    ${beefBaraGram} ÷ 1000 = ${(beefBaraGram / 1000).toFixed(2)}pc<br>
+    → 切り上げ ${up(beefBaraGram / 1000)}pc`);
+
+  document.getElementById("result").innerHTML = html;
+}
+
+function resetForm() {
+  const ids = [
+    "seat", "tanno", "miyabiNabe", "miyabiSteak",
+    "tukumoBara", "tukumoSteak", "botanSteak", "botanKoma",
+    "kiwami", "kai"
+  ];
+
+  ids.forEach(id => {
+    document.getElementById(id).value = 0;
+  });
+
+  document.getElementById("result").innerHTML = "人数を入力して「計算する」を押してください。";
+}
+</script>
+
+</body>
+</html>
